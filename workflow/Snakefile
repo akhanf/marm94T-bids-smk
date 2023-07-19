@@ -1,0 +1,31 @@
+from glob import glob
+from snakebids import bids
+
+configfile: 'config.yml'
+
+rule all:
+    input:
+        niftis=expand('niftis/sub-{subject}',subject=config['tarfiles'].keys()),
+        uni=expand(bids(root='work',subject='{subject}',acquisition='mp2rage',datatype='anat',beta='{beta}',suffix='UNIchannels.nii.gz'),
+                subject=config['tarfiles'].keys(),
+                beta=config['betas'])
+                
+
+rule extract_tar:
+    input:
+        tarfile = lambda wildcards: config['tarfiles'][wildcards.subject]
+    output:
+        directory('dicoms/sub-{subject}')
+    shell: 
+        'mkdir -p {output} && tar -C {output} -xvf {input}'
+
+rule dcm_to_nii:
+    input:
+        'dicoms/sub-{subject}'
+    output:
+        directory('niftis/sub-{subject}')
+    shell:
+        "mkdir -p {output} && dcm2niix -f '%s_%d' -o {output} -d 9 {input}"
+
+
+include: 'rules/mp2rage.smk'
