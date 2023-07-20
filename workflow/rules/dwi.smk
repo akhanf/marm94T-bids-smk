@@ -2,10 +2,9 @@ def get_import_dwi_cmd(wildcards,input,output):
     bval = sorted(glob( input.nii_folder + f'/*cfmmDtiEpi_10B0_30B1k_60B2k_Marm_ISO400.bval'))[-1] #get last one only
     prefix=bval[:-5]
     cmds=[]
-    nii_no_gz = output.nii[:-3]
-
-    cmds.append(f'cp {prefix}.nii {nii_no_gz}')
-    cmds.append(f'gzip {nii_no_gz}')
+    cmds.append(f'fslsplit {prefix}.nii split_dwi -t')
+    cmds.append(f'for im in `ls split_dwi*nii.gz`; do  c3d $im -orient RAI -o $im; done') 
+    cmds.append(f'fslmerge -t {output.nii} split_dwi*.nii.gz')
     cmds.append(f'cp {prefix}.bval {output.bval}')
     cmds.append(f'cp {prefix}.mvec {output.bvec}')
     cmds.append(f'cp {prefix}.json {output.json}')
@@ -39,18 +38,19 @@ rule import_dwi_files:
                 acq='multishell',
                 datatype='dwi',
                 suffix='dwi.json')
+    shadow: 'minimal'
     shell:
         "{params.cmd}"
      
 
 def get_import_dwi_rev_cmd(wildcards,input,output):
-    nii = sorted(glob( input.nii_folder + f'/*cfmmDtiEpi_5B0_RVPhase_Marm_ISO400.nii'))[-1] #get last one only
+    nii = sorted(glob( input.nii_folder + f'/*cfmmDtiEpi_5B0_RVPhase_Marm_ISO400.nii'))[-1] #get last series only
     prefix=nii[:-4]
     cmds=[]
-    nii_no_gz = output.nii[:-3]
 
-    cmds.append(f'cp {prefix}.nii {nii_no_gz}')
-    cmds.append(f'gzip {nii_no_gz}')
+    cmds.append(f'fslsplit {prefix}.nii split_dwi -t')
+    cmds.append(f'im=`ls split_dwi*nii.gz | tail -n 1`')
+    cmds.append(f'c3d $im -orient RAI -o {output.nii}')  #take last b0 image only
     cmds.append(f'cp {prefix}.json {output.json}')
 
     #need to create bval and bvec file
@@ -87,6 +87,7 @@ rule import_dwi_rev_files:
                 acq='revb0',
                 datatype='dwi',
                 suffix='dwi.json')
+    shadow: 'minimal'
     shell:
         "{params.cmd}"
         
