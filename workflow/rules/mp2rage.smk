@@ -107,7 +107,7 @@ def get_avg_mp2rage_cmd(wildcards,input,output):
         cmds.append(f'reg_resample -ref {ref} -flo {flo} -res resampled_{i}.nii.gz -aff {xfm} && ')
 
     #average images
-    cmds.append('c3d resampled_*.nii.gz'
+    cmds.append('c4d resampled_*.nii.gz')
     for i in range(len(niftis)-1):
         cmds.append('-add')
     cmds.append(f'-scale {1.0/len(niftis)}')
@@ -130,6 +130,7 @@ rule avg_mp2rage_complex_channels:
             )
     params:
         cmd = get_avg_mp2rage_cmd
+    shadow: 'minimal'
     output:
         bids(root='work',subject='{subject}',acquisition='mp2rage',datatype='anat',part='{part}',suffix='MP2RAGEchannels.nii.gz')
     shell:

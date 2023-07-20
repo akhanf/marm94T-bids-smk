@@ -6,7 +6,6 @@ n_channels: 8 #for complex coil data
 
 #for mp2rage denoising
 betas:
-  - 5000
   - 10000
   - 15000
   - 20000
