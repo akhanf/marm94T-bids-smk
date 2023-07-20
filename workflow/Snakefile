@@ -11,7 +11,14 @@ rule all:
         dwi=expand(bids(root='bids',subject='{subject}',acq='{acq}',datatype='dwi',suffix='dwi.nii.gz'),
                 subject=config['tarfiles'].keys(),
                 acq=['multishell','revb0'],
-            )
+            ),
+        mtsat=expand(bids(root='bids',subject='{subject}',acq='{acq}',datatype='anat',suffix='MTsat.nii.gz'),
+                subject=config['tarfiles'].keys(),
+                acq=['MTw','PDw','T1w'],
+            ),
+
+        dd='bids/dataset_description.json'
+    
                
 
 rule extract_tar:
@@ -31,5 +38,14 @@ rule dcm_to_nii:
         "mkdir -p {output} && dcm2niix -f '%s_%d' -o {output} -d 9 {input}"
 
 
+rule cp_dd_json:
+    input:
+        'resources/dataset_description.json'
+    output:
+        'bids/dataset_description.json'
+    shell:
+        'cp {input} {output}'
+
 include: 'rules/mp2rage.smk'
 include: 'rules/dwi.smk'
+include: 'rules/mtsat.smk'
