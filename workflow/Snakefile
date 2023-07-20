@@ -6,7 +6,7 @@ configfile: 'config.yml'
 rule all:
     input:
         niftis=expand('niftis/sub-{subject}',subject=config['tarfiles'].keys()),
-        uni=expand(bids(root='work',subject='{subject}',acquisition='mp2rage',datatype='anat',beta='{beta}',suffix='UNIchannels.nii.gz'),
+        uni=expand(bids(root='work',subject='{subject}',acquisition='mp2rage',datatype='anat',beta='{beta}',suffix='UNIDEN.nii.gz'),
                 subject=config['tarfiles'].keys(),
                 beta=config['betas'])
                 
