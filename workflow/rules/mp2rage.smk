@@ -1,7 +1,7 @@
 # grabs inversion images (complex, channel data), and performs mp2rage processing
 # TODO:
 #  - [x] create UNI-DEN image for each channel
-#  - [ ] perform channel combination 
+#  - [x] perform channel combination 
 #  - [ ] perform T1 mapping  (qMRlab? pymp2rage?)
 
 
@@ -135,19 +135,19 @@ rule avg_mp2rage_complex_channels:
         cmd = get_avg_mp2rage_cmd
     shadow: 'minimal'
     output:
-        bids(root='work',subject='{subject}',acquisition='mp2rage',datatype='anat',part='{part}',suffix='MP2RAGEchannels.nii.gz')
+        bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',part='{part}',suffix='MP2RAGEchannels.nii.gz')
     shell:
         '{params.cmd}'
 
 rule split_inversions:
     input:
-        bids(root='work',subject='{subject}',acquisition='mp2rage',datatype='anat',part='{part}',suffix='MP2RAGEchannels.nii.gz')
+        bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',part='{part}',suffix='MP2RAGEchannels.nii.gz')
     params:
         vols_inv1=f'0:{n_channels-1}',
         vols_inv2=f'{n_channels}:-1'
     output:
-        inv1=bids(root='work',subject='{subject}',acquisition='mp2rage',datatype='anat',part='{part}',inv='1',suffix='MP2RAGEchannels.nii.gz'),
-        inv2=bids(root='work',subject='{subject}',acquisition='mp2rage',datatype='anat',part='{part}',inv='2',suffix='MP2RAGEchannels.nii.gz')
+        inv1=bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',part='{part}',inv='1',suffix='MP2RAGEchannels.nii.gz'),
+        inv2=bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',part='{part}',inv='2',suffix='MP2RAGEchannels.nii.gz')
     shell:
         'c4d {input} -slice w {params.vols_inv1} -tile w -o {output.inv1} && '
         'c4d {input} -slice w {params.vols_inv2} -tile w -o {output.inv2} '
@@ -156,13 +156,13 @@ rule split_inversions:
        
 rule mp2rage_numerator_denominator:
     input:
-        re_inv1=bids(root='work',subject='{subject}',acquisition='mp2rage',datatype='anat',part='real',inv='1',suffix='MP2RAGEchannels.nii.gz'),
-        re_inv2=bids(root='work',subject='{subject}',acquisition='mp2rage',datatype='anat',part='real',inv='2',suffix='MP2RAGEchannels.nii.gz'),
-        im_inv1=bids(root='work',subject='{subject}',acquisition='mp2rage',datatype='anat',part='imag',inv='1',suffix='MP2RAGEchannels.nii.gz'),
-        im_inv2=bids(root='work',subject='{subject}',acquisition='mp2rage',datatype='anat',part='imag',inv='2',suffix='MP2RAGEchannels.nii.gz'),
+        re_inv1=bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',part='real',inv='1',suffix='MP2RAGEchannels.nii.gz'),
+        re_inv2=bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',part='real',inv='2',suffix='MP2RAGEchannels.nii.gz'),
+        im_inv1=bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',part='imag',inv='1',suffix='MP2RAGEchannels.nii.gz'),
+        im_inv2=bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',part='imag',inv='2',suffix='MP2RAGEchannels.nii.gz'),
     output:
-        numerator=bids(root='work',subject='{subject}',acquisition='mp2rage',datatype='anat',suffix='UNInumeratorchannels.nii.gz'),
-        denominator=bids(root='work',subject='{subject}',acquisition='mp2rage',datatype='anat',suffix='UNIdenominatorchannels.nii.gz'),
+        numerator=bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',suffix='UNInumeratorchannels.nii.gz'),
+        denominator=bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',suffix='UNIdenominatorchannels.nii.gz'),
     shell:
         'c4d {input.re_inv1} {input.re_inv2} -multiply '
         ' {input.im_inv1} {input.im_inv2} -multiply '
@@ -175,24 +175,24 @@ rule mp2rage_numerator_denominator:
    
 rule mp2rage_add_bias_term: 
     input:
-        numerator=bids(root='work',subject='{subject}',acquisition='mp2rage',datatype='anat',suffix='UNInumeratorchannels.nii.gz'),
-        denominator=bids(root='work',subject='{subject}',acquisition='mp2rage',datatype='anat',suffix='UNIdenominatorchannels.nii.gz'),
+        numerator=bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',suffix='UNInumeratorchannels.nii.gz'),
+        denominator=bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',suffix='UNIdenominatorchannels.nii.gz'),
     params:
         num_offset = lambda wildcards: '-shift {offset}'.format(offset=-float(wildcards.beta)),
         den_offset = lambda wildcards: '-shift {offset}'.format(offset=2*float(wildcards.beta)),
     output:
-        numerator=bids(root='work',subject='{subject}',acquisition='mp2rage',datatype='anat',beta='{beta}',suffix='UNInumeratorchannels.nii.gz'),
-        denominator=bids(root='work',subject='{subject}',acquisition='mp2rage',datatype='anat',beta='{beta}',suffix='UNIdenominatorchannels.nii.gz'),
+        numerator=bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',beta='{beta}',suffix='UNInumeratorchannels.nii.gz'),
+        denominator=bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',beta='{beta}',suffix='UNIdenominatorchannels.nii.gz'),
     shell:
         'c4d {input.numerator} {params.num_offset} -o {output.numerator} && '
         'c4d {input.denominator} {params.den_offset} -o {output.denominator} '
 
 rule mp2rage_division:
     input:
-        numerator=bids(root='work',subject='{subject}',acquisition='mp2rage',datatype='anat',beta='{beta}',suffix='UNInumeratorchannels.nii.gz'),
-        denominator=bids(root='work',subject='{subject}',acquisition='mp2rage',datatype='anat',beta='{beta}',suffix='UNIdenominatorchannels.nii.gz'),
+        numerator=bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',beta='{beta}',suffix='UNInumeratorchannels.nii.gz'),
+        denominator=bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',beta='{beta}',suffix='UNIdenominatorchannels.nii.gz'),
     output:
-        uni=bids(root='work',subject='{subject}',acquisition='mp2rage',datatype='anat',beta='{beta}',suffix='UNIDENchannels.nii.gz'),
+        uni=bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',beta='{beta}',suffix='UNIDENchannels.nii.gz'),
     shell: 
         #c4d divide was not working properly, so using fsl:
         #'c4d {input.numerator} {input.denominator} -divide -replace inf 1000 -inf -1000 NaN 0  -o {output.uni}' 
@@ -220,12 +220,20 @@ def get_sos_combine_cmd(wildcards,input,output):
 
 rule sos_combine_chans:
     input:
-        uni=bids(root='work',subject='{subject}',acquisition='mp2rage',datatype='anat',beta='{beta}',suffix='UNIDENchannels.nii.gz'),
+        uni=bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',beta='{beta}',suffix='UNIDENchannels.nii.gz'),
     params:
         cmd=get_sos_combine_cmd,
     output:
-        uni=bids(root='work',subject='{subject}',acquisition='mp2rage',datatype='anat',beta='{beta}',suffix='UNIDEN.nii.gz'),
+        uni=bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',beta='{beta}',suffix='UNIDEN.nii.gz'),
     shadow: 'minimal'
     shell:
         ' {params.cmd}'
+
+rule cp_uni_to_bids:
+    input:
+        uni=bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',beta=config['beta'],suffix='UNIDEN.nii.gz'),
+    output:
+        uni=bids(root='bids',subject='{subject}',acq='mp2rage',datatype='anat',suffix='T1w.nii.gz'),
+    shell:
+        'cp {input} {output}' 
  
