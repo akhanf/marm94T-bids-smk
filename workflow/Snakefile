@@ -6,10 +6,13 @@ configfile: 'config.yml'
 rule all:
     input:
         niftis=expand('niftis/sub-{subject}',subject=config['tarfiles'].keys()),
-        uni=expand(bids(root='work',subject='{subject}',acquisition='mp2rage',datatype='anat',beta='{beta}',suffix='UNIchannels.nii.gz'),
+        uni=expand(bids(root='bids',subject='{subject}',acq='mp2rage',datatype='anat',suffix='T1w.nii.gz'),
+                subject=config['tarfiles'].keys()),
+        dwi=expand(bids(root='bids',subject='{subject}',acq='{acq}',datatype='dwi',suffix='dwi.nii.gz'),
                 subject=config['tarfiles'].keys(),
-                beta=config['betas'])
-                
+                acq=['multishell','revb0'],
+            )
+               
 
 rule extract_tar:
     input:
@@ -29,3 +32,4 @@ rule dcm_to_nii:
 
 
 include: 'rules/mp2rage.smk'
+include: 'rules/dwi.smk'

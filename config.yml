@@ -1,8 +1,9 @@
 tarfiles: 
   betty: Everling_Marmoset_20230718_Betty_20230718_01.484D54A4.tar
 
-  
+n_channels: 8 #for complex coil data
+
+
 #for mp2rage denoising
-betas:
-  - 0.1
-  - 0.5 
+beta: 20000
+
