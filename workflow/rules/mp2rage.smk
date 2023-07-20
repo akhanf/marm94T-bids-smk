@@ -102,10 +102,13 @@ def get_avg_mp2rage_cmd(wildcards,input,output):
     cmds = []
 
     #create upsampled ref
-    cmds.append(f'c4d {niftis[0]} -resample 200x200x200x100% ref_upsampled.nii.gz && ')
+#    cmds.append(f'c4d {niftis[0]} -resample 200x200x200x100% ref_upsampled.nii.gz && ')
 
     #apply registration
-    ref = 'ref_upsampled.nii.gz'
+    ref = niftis[0]
+#    ref = 'ref_upsampled.nii.gz'
+
+
     for i,(flo,xfm) in enumerate(zip(niftis,xfms)):
         cmds.append(f'reg_resample -ref {ref} -flo {flo} -res resampled_{i}.nii.gz -aff {xfm} && ')
 
