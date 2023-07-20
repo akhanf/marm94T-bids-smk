@@ -1,5 +1,5 @@
 tarfiles: 
-  betty: Everling_Marmoset_20230718_Betty_20230718_01.484D54A4.tar
+  betty: tarfiles/Everling_Marmoset_20230718_Betty_20230718_01.484D54A4.tar
 
 n_channels: 8 #for complex coil data
 
