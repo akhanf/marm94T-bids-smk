@@ -8,9 +8,10 @@ rule all:
         niftis=expand('niftis/sub-{subject}',subject=config['tarfiles'].keys()),
         uni=expand(bids(root='bids',subject='{subject}',acq='mp2rage',datatype='anat',suffix='T1w.nii.gz'),
                 subject=config['tarfiles'].keys()),
-        dwi=expand(bids(root='bids',subject='{subject}',acq='{acq}',datatype='dwi',suffix='dwi.nii.gz'),
+        dwi=expand(bids(root='bids',subject='{subject}',acq='{acq}',datatype='dwi',suffix='dwi.{ext}'),
                 subject=config['tarfiles'].keys(),
                 acq=['multishell','revb0'],
+                ext=['nii.gz','bval','bvec','json']
             ),
         mtsat=expand(bids(root='bids',subject='{subject}',acq='{acq}',datatype='anat',suffix='MTsat.nii.gz'),
                 subject=config['tarfiles'].keys(),
@@ -38,13 +39,16 @@ rule dcm_to_nii:
         "mkdir -p {output} && dcm2niix -f '%s_%d' -o {output} -d 9 {input}"
 
 
-rule cp_dd_json:
+rule cp_extra_bids:
     input:
-        'resources/dataset_description.json'
+        dd='resources/dataset_description.json',
+        ignore='resources/bidsignore'
     output:
-        'bids/dataset_description.json'
+        dd='bids/dataset_description.json',
+        ignore='bids/.bidsignore'
     shell:
-        'cp {input} {output}'
+        'cp {input.dd} {output.dd} && '
+        'cp {input.ignore} {output.ignore}'
 
 include: 'rules/mp2rage.smk'
 include: 'rules/dwi.smk'
