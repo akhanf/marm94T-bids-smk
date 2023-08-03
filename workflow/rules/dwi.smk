@@ -42,7 +42,7 @@ rule import_dwi_files:
                 acq='multishell',
                 datatype='dwi',
                 suffix='dwi.nii.gz'),
-        json=bids(root='bids',
+        json=bids(root='work',
                 subject='{subject}',
                 acq='multishell',
                 datatype='dwi',
@@ -62,7 +62,7 @@ rule import_dwi_files:
                 acq='revb0',
                 datatype='dwi',
                 suffix='dwi.bvec'),
-        rev_json=bids(root='bids',
+        rev_json=bids(root='work',
                 subject='{subject}',
                 acq='revb0',
                 datatype='dwi',
@@ -128,3 +128,39 @@ rule dwi_gradient_fix:
                 suffix='dwi.bvec'),
     shadow: 'minimal'
     shell: 'dwigradcheck {input.nii} -fslgrad {input.bvec} {input.bval} -export_grad_fsl {output.bvec} {output.bval}'
+
+
+def get_phase_encoding_direction(wildcards):
+    if wildcards.acq == 'multishell':
+        return 'i'
+    
+    if wildcards.acq == 'revb0':
+        return 'i-'
+
+rule finalize_json_dwi:
+    input:
+        json=bids(root='work',
+                subject='{subject}',
+                acq='{acq}',
+                datatype='dwi',
+                suffix='dwi.json'),
+    params:
+        phase_enc = get_phase_encoding_direction
+    output:
+        json=bids(root='bids',
+                subject='{subject}',
+                acq='{acq}',
+                datatype='dwi',
+                suffix='dwi.json'),
+    run:
+        import json
+        with open(input.json, 'r') as f:
+            data = json.load(f) 
+
+        data['PhaseEncodingDirection']=params.phase_enc
+
+        with open(output.json, 'w') as f:
+            json.dump(data, f, indent=4)
+
+
+
