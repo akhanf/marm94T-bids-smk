@@ -25,6 +25,17 @@ def get_uni_mp2rage_niftis(wildcards,input):
     niftis = sorted(glob( input.nii_folder + f'/*2_cfmmMP2RAGE_3D_ISO250*.nii'))
     return niftis
 
+def get_corr_uni_mp2rage_niftis(wildcards,input,output):
+    in_niftis = sorted(glob( input.nii_folder + f'/*2_cfmmMP2RAGE_3D_ISO250*.nii'))
+    out_niftis = [ Path(output.nii_folder) / Path(nii).name for nii in in_niftis ] 
+    return out_niftis
+
+
+def get_uni_mp2rage_jsons(wildcards,input):
+    jsons = sorted(glob( input.nii_folder + f'/*2_cfmmMP2RAGE_3D_ISO250*.json'))
+    return jsons
+
+
 def get_flo_indices(wildcards,input):
     niftis = sorted(glob( input.nii_folder + f'/*2_cfmmMP2RAGE_3D_ISO250*.nii'))
     return " ".join([f"{i}" for i in range(1, len(niftis))])
@@ -33,6 +44,21 @@ def get_flo_imgs(wildcards,input):
     niftis = sorted(glob( input.nii_folder + f'/*2_cfmmMP2RAGE_3D_ISO250*.nii'))
     return " ".join(niftis[1:])
 
+"""
+rule fixorient_uni:
+    input:
+        nii_folder='niftis/sub-{subject}',
+    params:
+        in_unis=get_uni_mp2rage_niftis,
+        out_unis=get_corr_uni_mp2rage_niftis,
+        ref_nii=lambda wildcards, input: sorted(glob(input.nii_folder + f'/*cfmmMP2RAGE_3D_ISO250_01.nii'))[0]
+    output: 
+        nii_folder=directory('niftis_corrorient/sub-{subject}')
+    run:
+        shell('mkdir -p {output.nii_folder}')
+        for in_uni,out_uni in zip(params.in_unis,params.out_unis):
+            shell('c3d {in_uni} -swapdim LSA -popas SWAPPED {params.ref_nii} -push SWAPPED -copy-transform -o {out_uni}') 
+"""
 
 rule moco_uni:
     """ motion-correct the multiple mp2rage scans using the UNI """
@@ -190,7 +216,7 @@ rule mp2rage_add_bias_term:
         'c4d {input.numerator} {params.num_offset} -o {output.numerator} && '
         'c4d {input.denominator} {params.den_offset} -o {output.denominator} '
 
-rule mp2rage_division:
+rule mp2rage_division_uniden:
     input:
         numerator=bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',beta='{beta}',suffix='UNInumeratorchannels.nii.gz'),
         denominator=bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',beta='{beta}',suffix='UNIdenominatorchannels.nii.gz'),
@@ -200,6 +226,16 @@ rule mp2rage_division:
         #c4d divide was not working properly, so using fsl:
         #'c4d {input.numerator} {input.denominator} -divide -replace inf 1000 -inf -1000 NaN 0  -o {output.uni}' 
         'fslmaths {input.numerator} -div {input.denominator} -add 0.5 {output.uni}' #need to add 0.5 to ensure the image has minimum at 0
+
+rule mp2rage_division:
+    input:
+        numerator=bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',suffix='UNInumeratorchannels.nii.gz'),
+        denominator=bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',suffix='UNIdenominatorchannels.nii.gz'),
+    output:
+        uni=bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',suffix='UNIchannels.nii.gz'),
+    shell: 
+        'fslmaths {input.numerator} -div {input.denominator}  {output.uni}' 
+
 
 def get_sos_combine_cmd(wildcards,input,output):
     cmds=[]
@@ -219,18 +255,87 @@ def get_sos_combine_cmd(wildcards,input,output):
     cmds.append(f'-o {output}')
     return ' '.join(cmds)
 
-
-
-rule sos_combine_chans:
+rule sos_combine_uni:
     input:
-        uni=bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',beta='{beta}',suffix='UNIDENchannels.nii.gz'),
+        bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',suffix='UNIchannels.nii.gz'),
     params:
         cmd=get_sos_combine_cmd,
     output:
-        uni=bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',beta='{beta}',suffix='UNIDEN.nii.gz'),
+        bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',suffix='UNI.nii.gz'),
     shadow: 'minimal'
     shell:
-        ' {params.cmd}'
+        '{params.cmd}'
+
+
+
+
+rule sos_combine_uniden:
+    input:
+        bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',beta='{beta}',suffix='UNIDENchannels.nii.gz'),
+    params:
+        cmd=get_sos_combine_cmd,
+    output:
+        bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',beta='{beta}',suffix='UNIDEN.nii.gz'),
+    shadow: 'minimal'
+    shell:
+        '{params.cmd}'
+
+
+rule sos_combine_invs:
+    input:
+        bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',part='{part}',inv='{inv}',suffix='MP2RAGEchannels.nii.gz')
+    params:
+        cmd=get_sos_combine_cmd,
+    output:
+        bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',part='{part}',inv='{inv}',suffix='MP2RAGE.nii.gz')
+    shadow: 'minimal'
+    shell:
+        '{params.cmd}'
+
+rule real_imag_to_phase_mag:
+    input:
+        real=bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',part='real',inv='{inv}',suffix='MP2RAGE.nii.gz'),
+        imag=bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',part='imag',inv='{inv}',suffix='MP2RAGE.nii.gz')
+    output:
+        mag=bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',part='mag',inv='{inv}',suffix='MP2RAGE.nii.gz'),
+        phase=bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',part='phase',inv='{inv}',suffix='MP2RAGE.nii.gz'),
+    shell:
+        'c3d {input.imag} {input.real} -atan2 -o {output.phase} && '
+        'c3d {input.imag}  -dup -multiply -popas IMAG_SQUARED {input.real} -dup -multiply -popas REAL_SQUARED -push IMAG_SQUARED -push REAL_SQUARED -add -sqrt -o {output.mag}'
+
+
+rule get_bruker_params:
+    input:
+        nii_folder='niftis/sub-{subject}',
+        dcm_folder='dicoms/sub-{subject}'
+    params:
+        jsons = get_uni_mp2rage_jsons
+    output:
+        method_json=bids(root='work',subject='{subject}',datatype='anat',acq='mp2rage',suffix='MP2RAGE.method.json'),
+    script:
+        '../scripts/extract_bruker_info_mp2rage.py'
+
+rule fixorient_uni:
+    input:
+        uni=bids(
+            root='work',
+            suffix="UNI.nii.gz",
+            desc="moco",
+            datatype='anat',
+            subject='{subject}'
+        ),
+        ref=bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',beta=config['beta'],suffix='UNIDEN.nii.gz'),
+    output: 
+        uni=bids(
+            root='work',
+            suffix="UNI.nii.gz",
+            desc="fixorient",
+            datatype='anat',
+            subject='{subject}'
+        ),
+    shell:
+        'c3d {input.uni} -swapdim LSA -popas SWAPPED {input.ref} -push SWAPPED -copy-transform -o {output}'
+
 
 rule cp_uni_to_bids:
     input:

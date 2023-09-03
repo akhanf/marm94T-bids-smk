@@ -71,7 +71,7 @@ rule import_dwi_files:
     shell:
         "{params.cmd}"
      
-rule extract_bruker_info:
+rule extract_bruker_info_dwi:
     input:
         nii_folder='niftis/sub-{subject}',
         dcm_folder='dicoms/sub-{subject}'
@@ -96,7 +96,7 @@ rule extract_bruker_info:
                 acq='multishell',
                 datatype='dwi',
                 suffix='dwi.method.json'),
-    script: '../scripts/extract_bruker_info.py'
+    script: '../scripts/extract_bruker_info_dwi.py'
 
 rule dwi_gradient_fix:
     input:

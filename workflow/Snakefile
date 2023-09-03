@@ -3,6 +3,7 @@ from snakebids import bids
 
 configfile: 'config.yml'
 
+  
 rule all:
     input:
         niftis=expand('niftis/sub-{subject}',subject=config['tarfiles'].keys()),
@@ -20,7 +21,16 @@ rule all:
 
         dd='bids/dataset_description.json'
     
-               
+rule all_mp2rage:
+    input:
+         uni=expand(bids(root='bids',subject='{subject}',acq='mp2rage',datatype='anat',suffix='T1w.nii.gz'),
+                subject=config['tarfiles'].keys()),
+         invs=expand(bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',part='{part}',inv='{inv}',suffix='MP2RAGE.nii.gz'),
+                subject=config['tarfiles'].keys(),
+                part=['mag','phase'],
+                inv=[1,2]
+                ),
+      
 
 rule extract_tar:
     input:
